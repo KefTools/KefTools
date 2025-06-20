@@ -1,0 +1,3 @@
+[submodule "modules/KefUtils"]
+	path = modules/KefUtils
+	url = https://github.com/KefTools/KefUtils
