@@ -8,4 +8,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\modules\KefUtils\KefUtils\KefUtils\KefUtils.csproj" />
+  </ItemGroup>
+
 </Project>
