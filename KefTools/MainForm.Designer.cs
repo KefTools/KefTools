@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            ToolStripDropDownButton toolStripDropDownButton1;
+            ToolStripDropDownButton fileStripDropDownButton;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             newProjectToolStripMenuItem = new ToolStripMenuItem();
             loadProjectToolStripMenuItem = new ToolStripMenuItem();
@@ -37,19 +37,27 @@
             toolStripSeparator2 = new ToolStripSeparator();
             ExitToolStripMenuItem = new ToolStripMenuItem();
             toolStrip1 = new ToolStrip();
-            toolStripDropDownButton1 = new ToolStripDropDownButton();
+            projectStripDropDownButton = new ToolStripDropDownButton();
+            importblkToolStripMenuItem = new ToolStripMenuItem();
+            toolStripSeparator3 = new ToolStripSeparator();
+            settingsToolStripMenuItem = new ToolStripMenuItem();
+            statusStrip1 = new StatusStrip();
+            toolStripProgressBar1 = new ToolStripProgressBar();
+            fileStripDropDownButton = new ToolStripDropDownButton();
             toolStrip1.SuspendLayout();
+            statusStrip1.SuspendLayout();
             SuspendLayout();
             // 
-            // toolStripDropDownButton1
+            // fileStripDropDownButton
             // 
-            toolStripDropDownButton1.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            toolStripDropDownButton1.DropDownItems.AddRange(new ToolStripItem[] { newProjectToolStripMenuItem, loadProjectToolStripMenuItem, toolStripSeparator1, saveProjectToolStripMenuItem, toolStripSeparator2, ExitToolStripMenuItem });
-            toolStripDropDownButton1.Image = (Image)resources.GetObject("toolStripDropDownButton1.Image");
-            toolStripDropDownButton1.ImageTransparentColor = Color.Magenta;
-            toolStripDropDownButton1.Name = "toolStripDropDownButton1";
-            toolStripDropDownButton1.Size = new Size(38, 22);
-            toolStripDropDownButton1.Text = "File";
+            fileStripDropDownButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            fileStripDropDownButton.DropDownItems.AddRange(new ToolStripItem[] { newProjectToolStripMenuItem, loadProjectToolStripMenuItem, toolStripSeparator1, saveProjectToolStripMenuItem, toolStripSeparator2, ExitToolStripMenuItem });
+            fileStripDropDownButton.Image = (Image)resources.GetObject("fileStripDropDownButton.Image");
+            fileStripDropDownButton.ImageTransparentColor = Color.Magenta;
+            fileStripDropDownButton.Name = "fileStripDropDownButton";
+            fileStripDropDownButton.ShowDropDownArrow = false;
+            fileStripDropDownButton.Size = new Size(29, 22);
+            fileStripDropDownButton.Text = "File";
             // 
             // newProjectToolStripMenuItem
             // 
@@ -100,12 +108,58 @@
             // toolStrip1
             // 
             toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
-            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripDropDownButton1 });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { fileStripDropDownButton, projectStripDropDownButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
+            toolStrip1.RenderMode = ToolStripRenderMode.System;
             toolStrip1.Size = new Size(484, 25);
             toolStrip1.TabIndex = 0;
             toolStrip1.Text = "toolStrip1";
+            // 
+            // projectStripDropDownButton
+            // 
+            projectStripDropDownButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            projectStripDropDownButton.DropDownItems.AddRange(new ToolStripItem[] { importblkToolStripMenuItem, toolStripSeparator3, settingsToolStripMenuItem });
+            projectStripDropDownButton.Enabled = false;
+            projectStripDropDownButton.Image = (Image)resources.GetObject("projectStripDropDownButton.Image");
+            projectStripDropDownButton.ImageTransparentColor = Color.Magenta;
+            projectStripDropDownButton.Name = "projectStripDropDownButton";
+            projectStripDropDownButton.ShowDropDownArrow = false;
+            projectStripDropDownButton.Size = new Size(48, 22);
+            projectStripDropDownButton.Text = "Project";
+            // 
+            // importblkToolStripMenuItem
+            // 
+            importblkToolStripMenuItem.Name = "importblkToolStripMenuItem";
+            importblkToolStripMenuItem.Size = new Size(180, 22);
+            importblkToolStripMenuItem.Text = "Import (*.blk)";
+            importblkToolStripMenuItem.Click += importblkToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator3
+            // 
+            toolStripSeparator3.Name = "toolStripSeparator3";
+            toolStripSeparator3.Size = new Size(177, 6);
+            // 
+            // settingsToolStripMenuItem
+            // 
+            settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
+            settingsToolStripMenuItem.Size = new Size(180, 22);
+            settingsToolStripMenuItem.Text = "Settings";
+            settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripProgressBar1 });
+            statusStrip1.Location = new Point(0, 439);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(484, 22);
+            statusStrip1.TabIndex = 1;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // toolStripProgressBar1
+            // 
+            toolStripProgressBar1.Name = "toolStripProgressBar1";
+            toolStripProgressBar1.Size = new Size(100, 16);
             // 
             // MainForm
             // 
@@ -114,12 +168,15 @@
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(484, 461);
+            Controls.Add(statusStrip1);
             Controls.Add(toolStrip1);
             MinimumSize = new Size(0, 500);
             Name = "MainForm";
             Text = "KefTools";
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -133,5 +190,11 @@
         private ToolStripMenuItem saveProjectToolStripMenuItem;
         private ToolStripMenuItem ExitToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator2;
+        private ToolStripDropDownButton projectStripDropDownButton;
+        private ToolStripMenuItem importblkToolStripMenuItem;
+        private ToolStripSeparator toolStripSeparator3;
+        private ToolStripMenuItem settingsToolStripMenuItem;
+        private StatusStrip statusStrip1;
+        private ToolStripProgressBar toolStripProgressBar1;
     }
 }

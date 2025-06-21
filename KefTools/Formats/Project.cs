@@ -6,6 +6,7 @@ using Serilog;
 namespace KefTools.Formats
 {
     #region Interface
+
     /// <summary>
     /// Defines the contract for a serializable project configuration.
     /// </summary>
@@ -27,6 +28,7 @@ namespace KefTools.Formats
         /// <param name="filePath">Destination path for the serialized project.</param>
         void Serialize(string filePath);
     }
+
     #endregion
 
     #region Header
@@ -61,32 +63,36 @@ namespace KefTools.Formats
         {
             try
             {
-                log.Information("Serializing Project to {FilePath}", filePath);
+                log.Information("Starting serialization of Project to {FilePath}", filePath);
+                log.Debug("WorkingDirectory={Working}, ReleaseDirectory={Release}", WorkingDirectory, ReleaseDirectory);
 
-                // Convert to XML
                 using var xmlStream = new MemoryStream();
                 new XmlSerializer(typeof(Project)).Serialize(xmlStream, this);
                 var xmlBytes = xmlStream.ToArray();
-                log.Debug("Serialized XML: {Size} bytes", xmlBytes.Length);
+
+                log.Debug("XML serialized successfully: {Length} bytes", xmlBytes.Length);
 
 #if DEBUG
-                // Human-readable header
                 var header = new StringBuilder();
                 header.AppendLine("# KEFTOOLS PROJECT FILE");
                 header.AppendLine($"# MAGIC: {ProjectHeader.Magic.Trim('\0')}");
                 header.AppendLine($"# VERSION: {ProjectHeader.Version}");
                 header.AppendLine($"# PAYLOAD_LENGTH: {xmlBytes.Length}");
                 header.AppendLine();
+
                 File.WriteAllText(filePath, header.ToString(), Encoding.UTF8);
                 File.AppendAllText(filePath, Encoding.UTF8.GetString(xmlBytes));
+                log.Information("Project saved as readable file to {FilePath}", filePath);
 #else
-                // Compress XML
                 using var compressedStream = new MemoryStream();
                 using (var deflate = new DeflateStream(compressedStream, CompressionLevel.Optimal, leaveOpen: true))
+                {
                     deflate.Write(xmlBytes, 0, xmlBytes.Length);
-                var compressed = compressedStream.ToArray();
+                }
 
-                // Binary output
+                var compressed = compressedStream.ToArray();
+                log.Debug("XML compressed: {CompressedLength} bytes", compressed.Length);
+
                 using var fs = File.Create(filePath);
                 using var bw = new BinaryWriter(fs);
                 bw.Write(ProjectHeader.MagicBytes);
@@ -94,16 +100,15 @@ namespace KefTools.Formats
                 bw.Write(new byte[3]);
                 bw.Write(compressed.Length);
                 bw.Write(compressed);
-#endif
 
                 log.Information("Project saved to {FilePath}", filePath);
+#endif
             }
             catch (Exception ex)
             {
-                log.Error(ex, "Failed to serialize Project to {FilePath}", filePath);
+                log.Error(ex, "Exception during project serialization to {FilePath}", filePath);
             }
         }
-
 
         #endregion
 
@@ -111,44 +116,68 @@ namespace KefTools.Formats
 
         public static Project? Deserialize(string filePath)
         {
-            log.Information("Deserializing Project from {FilePath}", filePath);
+            log.Information("Attempting to deserialize project from {FilePath}", filePath);
 
             try
             {
                 if (!File.Exists(filePath))
-                    throw new FileNotFoundException("Project file not found.", filePath);
+                {
+                    log.Warning("File not found: {FilePath}", filePath);
+                    return null;
+                }
 
 #if DEBUG
                 var lines = File.ReadAllLines(filePath);
                 if (!lines.Any(l => l.Contains(ProjectHeader.Magic.Trim('\0'))))
-                    throw new InvalidDataException("Missing or invalid readable header.");
+                {
+                    log.Error("Missing or malformed readable header in project file: {FilePath}", filePath);
+                    return null;
+                }
 
                 var xml = string.Join('\n', lines.SkipWhile(line => line.StartsWith('#')));
-                log.Debug("Loaded readable XML. Length: {Length} chars", xml.Length);
+                log.Debug("Extracted XML from readable file. Length: {Length}", xml.Length);
 
                 var project = new XmlSerializer(typeof(Project)).Deserialize(new StringReader(xml)) as Project;
                 if (project == null)
-                    throw new InvalidDataException("Deserialized project is null.");
+                {
+                    log.Error("Deserialization returned null project.");
+                    return null;
+                }
 
+                log.Information("Project loaded successfully from readable file.");
                 return project;
 #else
                 using var fs = File.OpenRead(filePath);
                 if (fs.Length < ProjectHeader.HeaderSize)
-                    throw new InvalidDataException("File too small to be valid.");
+                {
+                    log.Error("Project file too small to be valid. Size: {Length}", fs.Length);
+                    return null;
+                }
 
                 using var br = new BinaryReader(fs);
                 Span<byte> magic = stackalloc byte[8];
                 br.Read(magic);
+
                 if (!magic.SequenceEqual(ProjectHeader.MagicBytes))
-                    throw new InvalidDataException("Invalid file magic.");
+                {
+                    log.Error("Invalid magic header in project file.");
+                    return null;
+                }
 
-                if (br.ReadByte() != ProjectHeader.Version)
-                    throw new InvalidDataException("Unsupported version.");
+                var version = br.ReadByte();
+                if (version != ProjectHeader.Version)
+                {
+                    log.Error("Unsupported project version: {Version} (expected {Expected})", version, ProjectHeader.Version);
+                    return null;
+                }
 
-                br.ReadBytes(3); // reserved
+                br.ReadBytes(3);
                 int length = br.ReadInt32();
                 if (length <= 0 || length > fs.Length - ProjectHeader.HeaderSize)
-                    throw new InvalidDataException("Corrupt XML length.");
+                {
+                    log.Error("Declared XML length is invalid: {Length}", length);
+                    return null;
+                }
 
                 var compressed = br.ReadBytes(length);
                 using var compressedStream = new MemoryStream(compressed);
@@ -158,18 +187,26 @@ namespace KefTools.Formats
 
                 var project = new XmlSerializer(typeof(Project)).Deserialize(new StringReader(xml)) as Project;
                 if (project == null)
-                    throw new InvalidDataException("Deserialized project is null.");
+                {
+                    log.Error("Deserialization returned null project.");
+                    return null;
+                }
 
+                log.Information("Project loaded successfully from binary file.");
                 return project;
 #endif
             }
+            catch (InvalidDataException ide)
+            {
+                log.Warning(ide, "Invalid project data in file: {FilePath}", filePath);
+                return null;
+            }
             catch (Exception ex)
             {
-                log.Error(ex, "Failed to load Project from {FilePath}", filePath);
+                log.Error(ex, "Unexpected error while loading project from {FilePath}", filePath);
                 return null;
             }
         }
-
 
         #endregion
     }
