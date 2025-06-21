@@ -113,13 +113,14 @@ public class KefProject
             var compressed = br.ReadBytes(length);
 
 
-#if !DEBUG
+
             // Decompress and deserialize
             using var compressedStream = new MemoryStream(compressed);
             using var deflate = new DeflateStream(compressedStream, CompressionMode.Decompress);
+
+#if !DEBUG
             using var reader = new StreamReader(deflate, Encoding.UTF8);
 #else
-            using var compressedStream = new MemoryStream(compressed);
             using var reader = new StreamReader(compressedStream, Encoding.UTF8);
 #endif
 
