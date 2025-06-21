@@ -7,7 +7,7 @@ public partial class NewProjectDialog : Form
 {
     private static readonly ILogger log = Log.ForContext("Component", "NewProjectDialog");
 
-    public KefProject? Project { get; private set; }
+    public Project? Project { get; private set; }
 
     public string WorkingDirectory => textWorkingDir.Text.Trim();
     public string ReleaseDirectory => textReleaseDir.Text.Trim();
@@ -71,7 +71,7 @@ public partial class NewProjectDialog : Form
             return;
         }
 
-        Project = new KefProject
+        Project = new Project
         {
             WorkingDirectory = WorkingDirectory,
             ReleaseDirectory = ReleaseDirectory

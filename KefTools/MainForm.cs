@@ -6,7 +6,7 @@ namespace KefTools
 {
     public partial class MainForm : Form
     {
-        private KefProject? currentProject;
+        private Project? currentProject;
 
         public MainForm()
         {
@@ -73,7 +73,7 @@ namespace KefTools
                 string path = dialog.FileName;
                 Log.Information("Attempting to load project from: {Path}", path);
 
-                var project = KefProject.Deserialize(path);
+                var project = Project.Deserialize(path);
 
                 if (project != null)
                 {
