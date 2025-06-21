@@ -47,7 +47,6 @@ public class KefProject
             new XmlSerializer(typeof(KefProject)).Serialize(xmlStream, this);
             var xmlBytes = xmlStream.ToArray();
             log.Debug("Serialized XML: {Size} bytes", xmlBytes.Length);
-
             // Compress XML
             using var compressedStream = new MemoryStream();
             using (var deflate = new DeflateStream(compressedStream, CompressionLevel.Optimal, leaveOpen: true))
@@ -58,11 +57,18 @@ public class KefProject
             // Write to file
             using var fs = File.Create(filePath);
             using var bw = new BinaryWriter(fs);
+
             bw.Write(KefProjectHeader.MagicBytes);
             bw.Write(KefProjectHeader.Version);
             bw.Write(new byte[3]); // reserved
+
+#if !DEBUG
             bw.Write(compressed.Length);
             bw.Write(compressed);
+#else
+            bw.Write(xmlBytes.Length);
+            bw.Write(xmlBytes);
+#endif
 
             log.Information("KefProject saved successfully to {FilePath}", filePath);
         }
@@ -106,10 +112,17 @@ public class KefProject
 
             var compressed = br.ReadBytes(length);
 
+
+#if !DEBUG
             // Decompress and deserialize
             using var compressedStream = new MemoryStream(compressed);
             using var deflate = new DeflateStream(compressedStream, CompressionMode.Decompress);
             using var reader = new StreamReader(deflate, Encoding.UTF8);
+#else
+            using var compressedStream = new MemoryStream(compressed);
+            using var reader = new StreamReader(compressedStream, Encoding.UTF8);
+#endif
+
             string xml = reader.ReadToEnd();
             log.Debug("Decompressed XML loaded. Size: {Size} chars", xml.Length);
 
