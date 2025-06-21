@@ -1,3 +1,7 @@
+using KefTools.Utils;
+using Serilog;
+using Serilog.Events;
+
 namespace KefTools
 {
     internal static class Program
@@ -8,10 +12,12 @@ namespace KefTools
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+            Logger.Init(LogEventLevel.Debug);
+
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            Application.Run(new MainForm());
+
+            Application.ApplicationExit += (_, _) => Log.CloseAndFlush();
         }
     }
 }
