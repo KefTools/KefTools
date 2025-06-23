@@ -5,33 +5,24 @@ using Serilog;
 
 namespace KefTools.Formats
 {
-    #region Interface
+    #region Interfaces
 
     /// <summary>
     /// Defines the contract for a serializable project configuration.
     /// </summary>
     public interface IProject
     {
-        /// <summary>
-        /// Gets or sets the working directory for the project.
-        /// </summary>
         string WorkingDirectory { get; set; }
-
-        /// <summary>
-        /// Gets or sets the release output directory for the project.
-        /// </summary>
         string ReleaseDirectory { get; set; }
+        List<TypedDirectory> SourceDirectories { get; }
 
-        /// <summary>
-        /// Serializes the project to a file at the given path.
-        /// </summary>
-        /// <param name="filePath">Destination path for the serialized project.</param>
         void Serialize(string filePath);
+        void AddBlkSource(string folderPath);
     }
 
     #endregion
 
-    #region Header
+    #region Metadata
 
     public struct ProjectHeader
     {
@@ -45,6 +36,24 @@ namespace KefTools.Formats
         public static readonly byte[] MagicBytes = Encoding.ASCII.GetBytes(Magic);
     }
 
+    public enum SourceType
+    {
+        Unknown,
+        Blk
+    }
+
+    [Serializable]
+    public class TypedDirectory
+    {
+        [XmlAttribute("type")]
+        public SourceType Type { get; set; } = SourceType.Unknown;
+
+        [XmlText]
+        public string Path { get; set; } = string.Empty;
+
+        public TypedDirectory() { }
+    }
+
     #endregion
 
     [XmlRoot("Project")]
@@ -56,6 +65,23 @@ namespace KefTools.Formats
 
         public string WorkingDirectory { get; set; } = string.Empty;
         public string ReleaseDirectory { get; set; } = string.Empty;
+
+        [XmlArray("Sources")]
+        [XmlArrayItem("Directory")]
+        public List<TypedDirectory> SourceDirectories { get; set; } = [];
+
+        public void AddBlkSource(string folderPath)
+        {
+            if (!SourceDirectories.Any(x => x.Path.Equals(folderPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                SourceDirectories.Add(new TypedDirectory
+                {
+                    Type = SourceType.Blk,
+                    Path = folderPath
+                });
+                log.Debug("Added BLK source folder: {Path}", folderPath);
+            }
+        }
 
         #region Serialize
 
@@ -73,12 +99,12 @@ namespace KefTools.Formats
                 log.Debug("XML serialized successfully: {Length} bytes", xmlBytes.Length);
 
 #if DEBUG
-                var header = new StringBuilder();
-                header.AppendLine("# KEFTOOLS PROJECT FILE");
-                header.AppendLine($"# MAGIC: {ProjectHeader.Magic.Trim('\0')}");
-                header.AppendLine($"# VERSION: {ProjectHeader.Version}");
-                header.AppendLine($"# PAYLOAD_LENGTH: {xmlBytes.Length}");
-                header.AppendLine();
+                var header = new StringBuilder()
+                    .AppendLine("# KEFTOOLS PROJECT FILE")
+                    .AppendLine($"# MAGIC: {ProjectHeader.Magic.Trim('\0')}")
+                    .AppendLine($"# VERSION: {ProjectHeader.Version}")
+                    .AppendLine($"# PAYLOAD_LENGTH: {xmlBytes.Length}")
+                    .AppendLine();
 
                 File.WriteAllText(filePath, header.ToString(), Encoding.UTF8);
                 File.AppendAllText(filePath, Encoding.UTF8.GetString(xmlBytes));
@@ -86,20 +112,18 @@ namespace KefTools.Formats
 #else
                 using var compressedStream = new MemoryStream();
                 using (var deflate = new DeflateStream(compressedStream, CompressionLevel.Optimal, leaveOpen: true))
-                {
                     deflate.Write(xmlBytes, 0, xmlBytes.Length);
-                }
 
                 var compressed = compressedStream.ToArray();
                 log.Debug("XML compressed: {CompressedLength} bytes", compressed.Length);
 
                 using var fs = File.Create(filePath);
-                using var bw = new BinaryWriter(fs);
-                bw.Write(ProjectHeader.MagicBytes);
-                bw.Write(ProjectHeader.Version);
-                bw.Write(new byte[3]);
-                bw.Write(compressed.Length);
-                bw.Write(compressed);
+                using var writer = new BinaryWriter(fs);
+                writer.Write(ProjectHeader.MagicBytes);
+                writer.Write(ProjectHeader.Version);
+                writer.Write(new byte[3]);
+                writer.Write(compressed.Length);
+                writer.Write(compressed);
 
                 log.Information("Project saved to {FilePath}", filePath);
 #endif
@@ -134,18 +158,17 @@ namespace KefTools.Formats
                     return null;
                 }
 
-                var xml = string.Join('\n', lines.SkipWhile(line => line.StartsWith('#')));
-                log.Debug("Extracted XML from readable file. Length: {Length}", xml.Length);
-
-                var project = new XmlSerializer(typeof(Project)).Deserialize(new StringReader(xml)) as Project;
-                if (project == null)
+                int xmlStart = Array.FindIndex(lines, line => !line.StartsWith('#'));
+                if (xmlStart == -1)
                 {
-                    log.Error("Deserialization returned null project.");
+                    log.Error("No XML content found in project file: {FilePath}", filePath);
                     return null;
                 }
 
-                log.Information("Project loaded successfully from readable file.");
-                return project;
+                var xml = string.Join("\n", lines.Skip(xmlStart));
+                log.Debug("Extracted XML from readable file. Length: {Length}", xml.Length);
+
+                return DeserializeXml(xml);
 #else
                 using var fs = File.OpenRead(filePath);
                 if (fs.Length < ProjectHeader.HeaderSize)
@@ -171,7 +194,7 @@ namespace KefTools.Formats
                     return null;
                 }
 
-                br.ReadBytes(3);
+                br.ReadBytes(3); // reserved
                 int length = br.ReadInt32();
                 if (length <= 0 || length > fs.Length - ProjectHeader.HeaderSize)
                 {
@@ -185,15 +208,7 @@ namespace KefTools.Formats
                 using var reader = new StreamReader(deflate, Encoding.UTF8);
                 var xml = reader.ReadToEnd();
 
-                var project = new XmlSerializer(typeof(Project)).Deserialize(new StringReader(xml)) as Project;
-                if (project == null)
-                {
-                    log.Error("Deserialization returned null project.");
-                    return null;
-                }
-
-                log.Information("Project loaded successfully from binary file.");
-                return project;
+                return DeserializeXml(xml);
 #endif
             }
             catch (InvalidDataException ide)
@@ -204,6 +219,32 @@ namespace KefTools.Formats
             catch (Exception ex)
             {
                 log.Error(ex, "Unexpected error while loading project from {FilePath}", filePath);
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private static Project? DeserializeXml(string xml)
+        {
+            try
+            {
+                log.Debug("Attempting to deserialize the following XML:\n{Xml}", xml);
+
+                var serializer = new XmlSerializer(typeof(Project));
+                using var reader = new StringReader(xml);
+                var result = serializer.Deserialize(reader) as Project;
+
+                if (result == null)
+                    log.Error("XML deserialization returned null.");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex, "Failed to deserialize XML content.");
                 return null;
             }
         }

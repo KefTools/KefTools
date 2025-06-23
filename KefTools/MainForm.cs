@@ -1,6 +1,5 @@
 using KefTools.Dialogs;
 using KefTools.Formats;
-using KefUtils.IO;
 using Serilog;
 
 namespace KefTools
@@ -139,7 +138,6 @@ namespace KefTools
                 toolStripProgressBar1.Value = Math.Min(toolStripProgressBar1.Maximum, value);
             });
 
-
             await Task.Run(() =>
             {
                 for (int i = 0; i < selectedFiles.Length; i++)
@@ -159,19 +157,10 @@ namespace KefTools
 
                         Log.Information("Extracting {BlkFile} to {OutputDir}", blkPath, outputDir);
 
-                        // per-BLK progress, mapped to global progress range
-                        IProgress<int> perBlkProgress = new Progress<int>(percent =>
-                        {
-                            double globalProgress = ((i + percent / 100.0) / selectedFiles.Length) * 100.0;
-                            uiProgress.Report((int)globalProgress);
-                        });
+                       // TODO: Implement actual extraction logic in KefUtils 
 
-                        BlkArchiveReader.ReadAll(
-                            inputDir: Path.GetDirectoryName(blkPath)!,
-                            outputDir: outputDir,
-                            listingOnly: false,
-                            progress: perBlkProgress
-                        );
+                        double globalProgress = ((i + 1) / (double)selectedFiles.Length) * 100.0;
+                        uiProgress.Report((int)globalProgress);
                     }
                     catch (Exception ex)
                     {
@@ -180,9 +169,22 @@ namespace KefTools
                 }
             });
 
+            try
+            {
+                string savePath = Path.Combine(currentProject.WorkingDirectory, "project.kproj");
+                currentProject.Serialize(savePath);
+                Log.Information("Project updated and saved to {Path}", savePath);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to save project after importing BLK files.");
+            }
+
             toolStripProgressBar1.Visible = false;
             Log.Information("All selected BLK files processed.");
         }
+
+
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
