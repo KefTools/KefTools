@@ -1,21 +1,21 @@
-﻿using KefTools.Formats;
+﻿using KefTools.Backend.Projects;
 using Serilog;
 
 namespace KefTools.Dialogs
 {
-    public partial class ProjectSettingsDialog : Form
+    public partial class EditProjectDialog : Form
     {
-        private static readonly ILogger log = Log.ForContext("Component", "ProjectSettingsDialog");
+        private static readonly ILogger kLog = Log.ForContext("Component", "ProjectSettingsDialog");
 
-        public Project? Project { get; private set; }
+        public KefProject? Project { get; private set; }
 
         public string WorkingDirectory => textWorkingDir.Text.Trim();
         public string ReleaseDirectory => textReleaseDir.Text.Trim();
 
-        public ProjectSettingsDialog(Project existingProject)
+        public EditProjectDialog(KefProject existingProject)
         {
             InitializeComponent();
-            log.Debug("Settings dialog initialized.");
+            kLog.Debug("Settings dialog initialized.");
 
             textWorkingDir.Text = existingProject.WorkingDirectory;
             textReleaseDir.Text = existingProject.ReleaseDirectory;
@@ -33,11 +33,11 @@ namespace KefTools.Dialogs
             if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
             {
                 textWorkingDir.Text = folderBrowserDialog.SelectedPath;
-                log.Debug("Updated Working Directory: {Path}", textWorkingDir.Text);
+                kLog.Debug("Updated Working Directory: {Path}", textWorkingDir.Text);
             }
             else
             {
-                log.Debug("Working directory selection canceled.");
+                kLog.Debug("Working directory selection canceled.");
             }
         }
 
@@ -51,21 +51,21 @@ namespace KefTools.Dialogs
             if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
             {
                 textReleaseDir.Text = folderBrowserDialog.SelectedPath;
-                log.Debug("Updated Release Directory: {Path}", textReleaseDir.Text);
+                kLog.Debug("Updated Release Directory: {Path}", textReleaseDir.Text);
             }
             else
             {
-                log.Debug("Release directory selection canceled.");
+                kLog.Debug("Release directory selection canceled.");
             }
         }
 
         private void ApplyChanges(object? sender, EventArgs e)
         {
-            log.Debug("Applying project settings...");
+            kLog.Debug("Applying project settings...");
 
             if (string.IsNullOrWhiteSpace(WorkingDirectory) || string.IsNullOrWhiteSpace(ReleaseDirectory))
             {
-                log.Warning("Validation failed: one or both directories are empty.");
+                kLog.Warning("Validation failed: one or both directories are empty.");
                 MessageBox.Show(
                     "Both Working and Release directories are required.",
                     "Validation Error",
@@ -79,7 +79,7 @@ namespace KefTools.Dialogs
             Project!.WorkingDirectory = WorkingDirectory;
             Project.ReleaseDirectory = ReleaseDirectory;
 
-            log.Information("Project updated: WorkingDirectory={Working}, ReleaseDirectory={Release}",
+            kLog.Information("Project updated: WorkingDirectory={Working}, ReleaseDirectory={Release}",
                 Project.WorkingDirectory, Project.ReleaseDirectory);
 
             DialogResult = DialogResult.OK;

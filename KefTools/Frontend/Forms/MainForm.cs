@@ -1,12 +1,12 @@
+using KefTools.Backend.Projects;
 using KefTools.Dialogs;
-using KefTools.Formats;
 using Serilog;
 
 namespace KefTools
 {
     public partial class MainForm : Form
     {
-        private Project? currentProject;
+        private KefProject? currentProject;
 
         public MainForm()
         {
@@ -41,7 +41,7 @@ namespace KefTools
                 try
                 {
                     string savePath = Path.Combine(currentProject.WorkingDirectory, "project.kproj");
-                    currentProject.Serialize(savePath);
+                    currentProject.Save(savePath);
                     Log.Information("Project saved to {Path}", savePath);
                     saveProjectToolStripMenuItem.Enabled = true;
                     projectStripDropDownButton.Enabled = true;
@@ -74,7 +74,7 @@ namespace KefTools
                 string path = dialog.FileName;
                 Log.Information("Attempting to load project from: {Path}", path);
 
-                var project = Project.Deserialize(path);
+                var project = KefProject.Load(path);
 
                 if (project != null)
                 {
@@ -157,7 +157,7 @@ namespace KefTools
 
                         Log.Information("Extracting {BlkFile} to {OutputDir}", blkPath, outputDir);
 
-                       // TODO: Implement actual extraction logic in KefUtils 
+                        // TODO: Implement actual extraction logic in KefUtils 
 
                         double globalProgress = ((i + 1) / (double)selectedFiles.Length) * 100.0;
                         uiProgress.Report((int)globalProgress);
@@ -172,7 +172,7 @@ namespace KefTools
             try
             {
                 string savePath = Path.Combine(currentProject.WorkingDirectory, "project.kproj");
-                currentProject.Serialize(savePath);
+                currentProject.Save(savePath);
                 Log.Information("Project updated and saved to {Path}", savePath);
             }
             catch (Exception ex)
@@ -196,7 +196,7 @@ namespace KefTools
                 return;
             }
 
-            using var dialog = new ProjectSettingsDialog(currentProject)
+            using var dialog = new EditProjectDialog(currentProject)
             {
                 StartPosition = FormStartPosition.CenterParent
             };
@@ -209,7 +209,7 @@ namespace KefTools
                 try
                 {
                     string savePath = Path.Combine(currentProject.WorkingDirectory, "project.kproj");
-                    currentProject.Serialize(savePath);
+                    currentProject.Save(savePath);
                     Log.Information("Updated project saved to {Path}", savePath);
                 }
                 catch (Exception ex)

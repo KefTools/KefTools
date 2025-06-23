@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace KefTools.Dialogs
 {
-    partial class ProjectSettingsDialog
+    partial class EditProjectDialog
     {
         private IContainer components = null;
 
